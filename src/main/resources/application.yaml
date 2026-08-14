@@ -2,7 +2,7 @@ spring:
   application:
     name: secure-audit-log
   profiles:
-    default: h2
+    default: dev
   jpa:
     open-in-view: false
     hibernate:

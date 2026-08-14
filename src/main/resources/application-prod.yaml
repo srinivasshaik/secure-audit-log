@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: ${AUDIT_LOG_DB_URL}
+    username: ${AUDIT_LOG_DB_USERNAME}
+    password: ${AUDIT_LOG_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  h2:
+    console:
+      enabled: false
+
+audit:
+  security:
+    password: ${AUDIT_LOG_API_PASSWORD}

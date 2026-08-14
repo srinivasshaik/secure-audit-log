@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:17-alpine
-    profiles: ["postgres"]
+    profiles: ["prod"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-audit_log}
       POSTGRES_USER: ${POSTGRES_USER:-audit_log}
@@ -15,6 +15,23 @@ services:
       retries: 10
     volumes:
       - postgres-data:/var/lib/postgresql/data
+
+  audit-log:
+    build:
+      context: .
+    profiles: ["prod"]
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      AUDIT_LOG_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-audit_log}
+      AUDIT_LOG_DB_USERNAME: ${POSTGRES_USER:-audit_log}
+      AUDIT_LOG_DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      AUDIT_LOG_API_USERNAME: ${AUDIT_LOG_API_USERNAME:-audit-service}
+      AUDIT_LOG_API_PASSWORD: ${AUDIT_LOG_API_PASSWORD:?Set AUDIT_LOG_API_PASSWORD in .env}
+    ports:
+      - "${AUDIT_LOG_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres-data:
