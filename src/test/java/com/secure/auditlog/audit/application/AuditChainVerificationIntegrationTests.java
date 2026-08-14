@@ -10,6 +10,7 @@ import java.util.List;
 import com.secure.auditlog.audit.domain.ChainVerificationResult;
 import com.secure.auditlog.audit.domain.ChainViolationType;
 import com.secure.auditlog.audit.infrastructure.AuditEventJpaRepository;
+import com.secure.auditlog.compliance.ComplianceReportingService;
 import com.secure.auditlog.export.AuditExportService;
 import com.secure.auditlog.redaction.AuditRedactionService;
 
@@ -38,6 +39,8 @@ class AuditChainVerificationIntegrationTests {
 	private AuditEventJpaRepository auditEventRepository;
 	@Autowired
 	private AuditExportService exportService;
+	@Autowired
+	private ComplianceReportingService complianceReportingService;
 
 	@BeforeEach
 	void resetLedger() {
@@ -102,5 +105,20 @@ class AuditChainVerificationIntegrationTests {
 		assertEquals("audit-export-v1", bundle.formatVersion());
 		assertEquals(1, bundle.events().size());
 		assertEquals(64, bundle.exportHash().length());
+	}
+
+	@Test
+	void reportsOnlyClientAccountAccessEventsWithChainStatus() throws Exception {
+		auditLogService.append(new CreateAuditEventCommand("ACCOUNT_ACCESSED", "examiner-1", "ACCOUNT", "account-1",
+				objectMapper.readTree("{\"channel\":\"web\"}")));
+		auditLogService.append(new CreateAuditEventCommand("RECORD_UPDATED", "examiner-1", "ACCOUNT", "account-1",
+				objectMapper.readTree("{\"field\":\"status\"}")));
+
+		var report = complianceReportingService.report("examiner-1", "account-1", Instant.parse("2020-01-01T00:00:00Z"),
+				Instant.parse("2030-01-01T00:00:00Z"), 0, 50);
+
+		assertEquals(1, report.events().totalElements());
+		assertEquals("ACCOUNT_ACCESSED", report.events().content().getFirst().eventType());
+		assertTrue(report.chainVerification().intact());
 	}
 }
