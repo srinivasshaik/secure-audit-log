@@ -26,6 +26,12 @@ class SecurityIntegrationTests {
 	}
 
 	@Test
+	void exposesSwaggerDocumentationWithoutAuthenticationInDev() throws Exception {
+		mockMvc.perform(get("/v3/api-docs"))
+				.andExpect(status().isOk());
+	}
+
+	@Test
 	void protectsAuditEndpointsAndAllowsAnAuthorizedReader() throws Exception {
 		mockMvc.perform(get("/audit/verify"))
 				.andExpect(status().isUnauthorized());
