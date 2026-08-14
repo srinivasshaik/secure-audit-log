@@ -1,0 +1,10 @@
+package com.secure.auditlog.audit.domain;
+
+public enum ChainViolationType {
+	SEQUENCE_GAP,
+	PREVIOUS_HASH_MISMATCH,
+	CONTENT_HASH_MISMATCH,
+	INVALID_STORED_PAYLOAD,
+	CHAIN_STATE_SEQUENCE_MISMATCH,
+	CHAIN_STATE_HASH_MISMATCH
+}

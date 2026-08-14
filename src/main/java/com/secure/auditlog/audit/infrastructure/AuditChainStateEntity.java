@@ -28,5 +28,6 @@ public class AuditChainStateEntity {
 	}
 
 	public String getLastHash() { return lastHash; }
+	public long getLastSequence() { return lastSequence; }
 	public void setLastHash(String lastHash) { this.lastHash = lastHash; }
 }

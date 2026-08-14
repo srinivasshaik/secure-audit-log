@@ -38,6 +38,10 @@ public class CanonicalJsonService {
 		}
 	}
 
+	public String canonicalizeStoredPayload(String payload) {
+		return canonicalizeObject(read(payload));
+	}
+
 	private JsonNode canonicalize(JsonNode node) {
 		if (node.isObject()) {
 			ObjectNode result = objectMapper.createObjectNode();
