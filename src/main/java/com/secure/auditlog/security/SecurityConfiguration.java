@@ -42,7 +42,12 @@ public class SecurityConfiguration {
 					} else {
 						authorize.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").hasRole("AUDIT_READER");
 					}
-					authorize.requestMatchers("/h2-console/**").hasRole("SYSTEM_ADMIN")
+					if (properties.h2ConsolePublic()) {
+						authorize.requestMatchers("/h2-console/**").permitAll();
+					} else {
+						authorize.requestMatchers("/h2-console/**").hasRole("SYSTEM_ADMIN");
+					}
+					authorize
 							.requestMatchers(HttpMethod.POST, "/audit/events/*/redactions").hasRole("AUDIT_PRIVACY_OFFICER")
 							.requestMatchers("/compliance/**").hasRole("COMPLIANCE_OFFICER")
 							.requestMatchers(HttpMethod.POST, "/audit/events").hasRole("AUDIT_WRITER")

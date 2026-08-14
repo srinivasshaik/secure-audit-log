@@ -32,6 +32,15 @@ class SecurityIntegrationTests {
 	}
 
 	@Test
+	void doesNotRequireAuthenticationForH2ConsoleInDev() throws Exception {
+		// MockMvc does not dispatch to the separately registered H2 servlet. A 404 here
+		// therefore proves Spring Security did not challenge the unauthenticated request.
+		mockMvc.perform(get("/h2-console/"))
+				.andExpect(status().isNotFound())
+				.andExpect(header().doesNotExist("WWW-Authenticate"));
+	}
+
+	@Test
 	void protectsAuditEndpointsAndAllowsAnAuthorizedReader() throws Exception {
 		mockMvc.perform(get("/audit/verify"))
 				.andExpect(status().isUnauthorized());

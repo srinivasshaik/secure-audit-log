@@ -13,3 +13,4 @@ audit:
   security:
     password: ${AUDIT_LOG_API_PASSWORD:local-dev-only-change-me}
     swagger-public: true
+    h2-console-public: true

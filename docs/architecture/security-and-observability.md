@@ -10,7 +10,7 @@ The prototype uses stateless HTTP Basic authentication to make caller identity a
 - `COMPLIANCE_OFFICER` - compliance reporting
 - `SYSTEM_ADMIN` - local H2 console only
 
-Health and info are unauthenticated for orchestrator probes. Prometheus metrics require authentication. Swagger UI and OpenAPI are public in the `dev` H2 profile for local API exploration, but remain role-protected by default in production. The `dev` H2 profile has an explicitly local-only fallback password; production PostgreSQL requires `AUDIT_LOG_API_PASSWORD`.
+Health and info are unauthenticated for orchestrator probes. Prometheus metrics require authentication. Swagger UI, OpenAPI, and the H2 console are public in the `dev` H2 profile for local exploration, but remain role-protected by default in production; the H2 console is disabled there. The `dev` H2 profile has an explicitly local-only fallback password; production PostgreSQL requires `AUDIT_LOG_API_PASSWORD`.
 
 ## Logging and monitoring
 
