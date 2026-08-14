@@ -14,7 +14,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       probes:
@@ -25,6 +25,20 @@ springdoc:
     path: /swagger-ui.html
 
 audit:
+
+  security:
+    username: ${AUDIT_LOG_API_USERNAME:audit-service}
+    roles:
+      - AUDIT_READER
+      - AUDIT_WRITER
+      - AUDIT_PRIVACY_OFFICER
+      - COMPLIANCE_OFFICER
+      - SYSTEM_ADMIN
+
   retention:
     archive-after: 365d
     archive-cron: "0 0 2 * * *"
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%X{correlationId:-}] %logger{36} - %msg%n"

@@ -8,3 +8,7 @@ spring:
     console:
       enabled: true
       path: /h2-console
+
+audit:
+  security:
+    password: ${AUDIT_LOG_API_PASSWORD:local-dev-only-change-me}
