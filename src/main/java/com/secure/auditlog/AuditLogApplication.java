@@ -1,13 +1,12 @@
-package com.secure.auditlog.secure_audit_log;
+package com.secure.auditlog;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class SecureAuditLogApplication {
+public class AuditLogApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(SecureAuditLogApplication.class, args);
+		SpringApplication.run(AuditLogApplication.class, args);
 	}
-
 }

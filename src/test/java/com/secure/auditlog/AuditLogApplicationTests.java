@@ -1,13 +1,12 @@
-package com.secure.auditlog.secure_audit_log;
+package com.secure.auditlog;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class SecureAuditLogApplicationTests {
+class AuditLogApplicationTests {
 
 	@Test
 	void contextLoads() {
 	}
-
 }

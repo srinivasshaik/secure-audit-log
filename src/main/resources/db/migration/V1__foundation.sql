@@ -1,0 +1,2 @@
+-- Flyway baseline for the Audit Log Service.
+-- Domain tables are introduced with Scenario A so every schema change is traceable.
