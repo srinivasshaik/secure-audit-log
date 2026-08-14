@@ -1,6 +1,8 @@
 package com.secure.auditlog.audit.application;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 import com.secure.auditlog.audit.domain.AuditEventContent;
 import com.secure.auditlog.audit.domain.AuditHashingService;
@@ -11,6 +13,9 @@ import com.secure.auditlog.audit.infrastructure.AuditChainStateEntity;
 import com.secure.auditlog.audit.infrastructure.AuditChainStateJpaRepository;
 import com.secure.auditlog.audit.infrastructure.AuditEventEntity;
 import com.secure.auditlog.audit.infrastructure.AuditEventJpaRepository;
+import com.secure.auditlog.redaction.AuditEventRedactionEntity;
+import com.secure.auditlog.redaction.AuditEventRedactionRepository;
+import com.secure.auditlog.redaction.AuditRedactionHashingService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,19 +29,27 @@ public class AuditChainVerificationService {
 	private final AuditChainStateJpaRepository chainStateRepository;
 	private final CanonicalJsonService canonicalJsonService;
 	private final AuditHashingService hashingService;
+	private final AuditEventRedactionRepository redactionRepository;
+	private final AuditRedactionHashingService redactionHashingService;
 
 	public AuditChainVerificationService(AuditEventJpaRepository auditEventRepository,
 			AuditChainStateJpaRepository chainStateRepository, CanonicalJsonService canonicalJsonService,
-			AuditHashingService hashingService) {
+			AuditHashingService hashingService, AuditEventRedactionRepository redactionRepository,
+			AuditRedactionHashingService redactionHashingService) {
 		this.auditEventRepository = auditEventRepository;
 		this.chainStateRepository = chainStateRepository;
 		this.canonicalJsonService = canonicalJsonService;
 		this.hashingService = hashingService;
+		this.redactionRepository = redactionRepository;
+		this.redactionHashingService = redactionHashingService;
 	}
 
 	@Transactional(readOnly = true)
 	public ChainVerificationResult verify() {
 		List<AuditEventEntity> events = auditEventRepository.findAllByOrderByChainSequenceAsc();
+		Map<java.util.UUID, AuditEventRedactionEntity> redactions = events.isEmpty() ? Map.of() : redactionRepository
+				.findAllByAuditEventIdIn(events.stream().map(AuditEventEntity::getId).toList()).stream()
+				.collect(java.util.stream.Collectors.toMap(AuditEventRedactionEntity::getAuditEventId, Function.identity()));
 		String expectedPreviousHash = GENESIS_HASH;
 		long expectedSequence = 1;
 
@@ -57,11 +70,23 @@ public class AuditChainVerificationService {
 				return ChainVerificationResult.broken(expectedSequence - 1, event.getId(), event.getChainSequence(),
 						ChainViolationType.INVALID_STORED_PAYLOAD);
 			}
-			String recomputedContentHash = hashingService.contentHash(new AuditEventContent(event.getEventType(), event.getActorId(),
-					event.getResourceType(), event.getResourceId(), canonicalPayload, event.getOccurredAt()));
-			if (!recomputedContentHash.equals(event.getContentHash())) {
-				return ChainVerificationResult.broken(expectedSequence - 1, event.getId(), event.getChainSequence(),
-						ChainViolationType.CONTENT_HASH_MISMATCH);
+			AuditEventRedactionEntity redaction = redactions.get(event.getId());
+			if (redaction != null) {
+				String recomputedRedactionHash = redactionHashingService.redactionHash(redaction.getOriginalContentHash(), canonicalPayload,
+						redaction.getRedactedPaths(), redaction.getRedactedAt());
+				if (!canonicalPayload.equals(redaction.getRedactedPayload())
+						|| !event.getContentHash().equals(redaction.getOriginalContentHash())
+						|| !recomputedRedactionHash.equals(redaction.getRedactionHash())) {
+					return ChainVerificationResult.broken(expectedSequence - 1, event.getId(), event.getChainSequence(),
+								ChainViolationType.REDACTION_EVIDENCE_MISMATCH);
+				}
+			} else {
+				String recomputedContentHash = hashingService.contentHash(new AuditEventContent(event.getEventType(), event.getActorId(),
+						event.getResourceType(), event.getResourceId(), canonicalPayload, event.getOccurredAt()));
+				if (!recomputedContentHash.equals(event.getContentHash())) {
+					return ChainVerificationResult.broken(expectedSequence - 1, event.getId(), event.getChainSequence(),
+							ChainViolationType.CONTENT_HASH_MISMATCH);
+				}
 			}
 
 			expectedPreviousHash = event.getContentHash();

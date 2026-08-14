@@ -1,6 +1,7 @@
 package com.secure.auditlog.audit.domain;
 
 import java.util.Comparator;
+import java.util.List;
 
 import org.springframework.stereotype.Component;
 
@@ -40,6 +41,14 @@ public class CanonicalJsonService {
 
 	public String canonicalizeStoredPayload(String payload) {
 		return canonicalizeObject(read(payload));
+	}
+
+	public String canonicalizeStringArray(List<String> values) {
+		try {
+			return objectMapper.writeValueAsString(values.stream().sorted().toList());
+		} catch (JacksonException exception) {
+			throw new IllegalArgumentException("values could not be canonicalized", exception);
+		}
 	}
 
 	private JsonNode canonicalize(JsonNode node) {

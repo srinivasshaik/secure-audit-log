@@ -5,9 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
+import java.util.List;
 
 import com.secure.auditlog.audit.domain.ChainVerificationResult;
 import com.secure.auditlog.audit.domain.ChainViolationType;
+import com.secure.auditlog.audit.infrastructure.AuditEventJpaRepository;
+import com.secure.auditlog.export.AuditExportService;
+import com.secure.auditlog.redaction.AuditRedactionService;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,9 +32,16 @@ class AuditChainVerificationIntegrationTests {
 	private JdbcClient jdbcClient;
 	@Autowired
 	private ObjectMapper objectMapper;
+	@Autowired
+	private AuditRedactionService redactionService;
+	@Autowired
+	private AuditEventJpaRepository auditEventRepository;
+	@Autowired
+	private AuditExportService exportService;
 
 	@BeforeEach
 	void resetLedger() {
+		jdbcClient.sql("DELETE FROM audit_event_redaction").update();
 		jdbcClient.sql("DELETE FROM audit_event").update();
 		jdbcClient.sql("UPDATE audit_chain_state SET last_sequence = 0, "
 				+ "last_hash = '0000000000000000000000000000000000000000000000000000000000000000', version = 0 WHERE id = 1")
@@ -68,5 +79,28 @@ class AuditChainVerificationIntegrationTests {
 				.update();
 
 		assertTrue(verificationService.verify().intact());
+	}
+
+	@Test
+	void redactsSensitivePayloadAndPreservesVerifiableEvidence() throws Exception {
+		var event = auditLogService.append(new CreateAuditEventCommand("ACCOUNT_ACCESSED", "actor-1", "ACCOUNT", "account-1",
+				objectMapper.readTree("{\"accountNumber\":\"123456789\",\"channel\":\"web\"}")));
+
+		redactionService.redact(event.getId(), List.of("/accountNumber"));
+
+		assertFalse(auditEventRepository.findById(event.getId()).orElseThrow().getPayload().contains("123456789"));
+		assertTrue(verificationService.verify().intact());
+	}
+
+	@Test
+	void createsAStableVerifiableExportBundle() throws Exception {
+		auditLogService.append(new CreateAuditEventCommand("USER_LOGIN", "actor-1", "ACCOUNT", "account-1",
+				objectMapper.readTree("{\"channel\":\"web\"}")));
+
+		var bundle = exportService.export("actor-1", null);
+
+		assertEquals("audit-export-v1", bundle.formatVersion());
+		assertEquals(1, bundle.events().size());
+		assertEquals(64, bundle.exportHash().length());
 	}
 }

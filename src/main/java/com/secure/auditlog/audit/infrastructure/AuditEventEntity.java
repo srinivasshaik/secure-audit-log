@@ -68,4 +68,5 @@ public class AuditEventEntity {
 	public String getPreviousHash() { return previousHash; }
 	public String getContentHash() { return contentHash; }
 	public Instant getArchivedAt() { return archivedAt; }
+	public void replacePayload(String payload) { this.payload = payload; }
 }
