@@ -58,7 +58,8 @@ class AuditChainVerificationIntegrationTests {
 		auditLogService.append(new CreateAuditEventCommand("RECORD_UPDATED", "actor-2", "ACCOUNT", "account-1",
 				objectMapper.readTree("{\"field\":\"status\"}")));
 
-		assertTrue(verificationService.verify().intact());
+		ChainVerificationResult initialVerification = verificationService.verify();
+		assertTrue(initialVerification.intact(), initialVerification::toString);
 
 		jdbcClient.sql("UPDATE audit_event SET actor_id = :actorId WHERE id = :id")
 				.param("actorId", "tampered-actor")
@@ -81,7 +82,8 @@ class AuditChainVerificationIntegrationTests {
 				.param("id", event.getId())
 				.update();
 
-		assertTrue(verificationService.verify().intact());
+		ChainVerificationResult verification = verificationService.verify();
+		assertTrue(verification.intact(), verification::toString);
 	}
 
 	@Test
@@ -92,7 +94,8 @@ class AuditChainVerificationIntegrationTests {
 		redactionService.redact(event.getId(), List.of("/accountNumber"));
 
 		assertFalse(auditEventRepository.findById(event.getId()).orElseThrow().getPayload().contains("123456789"));
-		assertTrue(verificationService.verify().intact());
+		ChainVerificationResult verification = verificationService.verify();
+		assertTrue(verification.intact(), verification::toString);
 	}
 
 	@Test

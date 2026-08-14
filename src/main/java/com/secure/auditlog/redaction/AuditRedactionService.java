@@ -2,6 +2,7 @@ package com.secure.auditlog.redaction;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -57,7 +58,8 @@ public class AuditRedactionService {
 		}
 		String canonicalPayload = canonicalJsonService.canonicalizeObject(redactedPayload);
 		String canonicalPaths = canonicalJsonService.canonicalizeStringArray(paths);
-		Instant redactedAt = clock.instant();
+		// Keep certificate input stable after database timestamp serialization.
+		Instant redactedAt = clock.instant().truncatedTo(ChronoUnit.MICROS);
 		String redactionHash = redactionHashingService.redactionHash(event.getContentHash(), canonicalPayload, canonicalPaths,
 				redactedAt);
 

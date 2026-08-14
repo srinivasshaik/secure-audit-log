@@ -2,7 +2,7 @@
 
 ## Timestamp policy
 
-The service assigns `occurredAt` and `ingestedAt` from a UTC `Clock` at append time. Caller-supplied time is deliberately not accepted in Scenario A: an audit timestamp must reflect when this service accepted the event, not an unverified client claim.
+The service assigns `occurredAt` and `ingestedAt` from a UTC `Clock` at append time. Values are truncated to microseconds before hashing and persistence, matching PostgreSQL's default `TIMESTAMP` precision and preventing a precision-only mismatch during later verification. Caller-supplied time is deliberately not accepted in Scenario A: an audit timestamp must reflect when this service accepted the event, not an unverified client claim.
 
 ## Content canonicalization
 

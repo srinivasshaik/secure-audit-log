@@ -2,6 +2,7 @@ package com.secure.auditlog.audit.application;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -54,7 +55,9 @@ public class AuditLogService {
 
 		AuditChainStateEntity chainState = chainStateRepository.findSingletonForUpdate()
 				.orElseThrow(() -> new IllegalStateException("Audit chain state is missing"));
-		Instant now = clock.instant();
+		// PostgreSQL stores TIMESTAMP values at microsecond precision by default.
+		// Hash the persisted representation so a later verification reads identical data.
+		Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
 		String contentHash = hashingService.contentHash(new AuditEventContent(
 				command.eventType(), command.actorId(), command.resourceType(), command.resourceId(), canonicalPayload, now));
 		String previousHash = chainState.getLastHash();
