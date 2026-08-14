@@ -34,6 +34,8 @@ public class AuditEventEntity {
 	private String previousHash;
 	@Column(name = "content_hash", nullable = false, length = 64)
 	private String contentHash;
+	@Column(name = "archived_at")
+	private Instant archivedAt;
 
 	protected AuditEventEntity() {
 	}
@@ -65,4 +67,5 @@ public class AuditEventEntity {
 	public Instant getIngestedAt() { return ingestedAt; }
 	public String getPreviousHash() { return previousHash; }
 	public String getContentHash() { return contentHash; }
+	public Instant getArchivedAt() { return archivedAt; }
 }

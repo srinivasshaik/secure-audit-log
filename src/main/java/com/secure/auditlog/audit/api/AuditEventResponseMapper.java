@@ -17,6 +17,6 @@ public class AuditEventResponseMapper {
 	public AuditEventResponse toResponse(AuditEventEntity event) {
 		return new AuditEventResponse(event.getId(), event.getChainSequence(), event.getEventType(), event.getActorId(),
 				event.getResourceType(), event.getResourceId(), canonicalJsonService.read(event.getPayload()), event.getOccurredAt(),
-				event.getIngestedAt(), event.getPreviousHash(), event.getContentHash());
+				event.getIngestedAt(), event.getArchivedAt(), event.getPreviousHash(), event.getContentHash());
 	}
 }

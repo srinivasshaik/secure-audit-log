@@ -23,3 +23,8 @@ management:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+audit:
+  retention:
+    archive-after: 365d
+    archive-cron: "0 0 2 * * *"

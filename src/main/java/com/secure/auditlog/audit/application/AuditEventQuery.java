@@ -9,6 +9,7 @@ public record AuditEventQuery(
 		String eventType,
 		Instant from,
 		Instant to,
+		boolean includeArchived,
 		int page,
 		int size) {
 }

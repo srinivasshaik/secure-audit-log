@@ -46,10 +46,11 @@ public class AuditEventController {
 			@RequestParam(required = false) String eventType,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+			@RequestParam(defaultValue = "false") boolean includeArchived,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "50") int size) {
 		Page<AuditEventResponse> result = auditLogService.query(
-				new AuditEventQuery(actorId, resourceType, resourceId, eventType, from, to, page, size))
+				new AuditEventQuery(actorId, resourceType, resourceId, eventType, from, to, includeArchived, page, size))
 				.map(responseMapper::toResponse);
 		return new AuditEventPageResponse(result.getContent(), result.getNumber(), result.getSize(), result.getTotalElements(),
 				result.getTotalPages());

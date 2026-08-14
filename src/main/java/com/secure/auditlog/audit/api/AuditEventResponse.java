@@ -15,6 +15,7 @@ public record AuditEventResponse(
 		JsonNode payload,
 		Instant occurredAt,
 		Instant ingestedAt,
+		Instant archivedAt,
 		String previousHash,
 		String contentHash) {
 }

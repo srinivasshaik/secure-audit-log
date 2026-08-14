@@ -96,6 +96,7 @@ public class AuditLogService {
 			if (query.eventType() != null) predicates.add(criteriaBuilder.equal(root.get("eventType"), query.eventType()));
 			if (query.from() != null) predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.<Instant>get("occurredAt"), query.from()));
 			if (query.to() != null) predicates.add(criteriaBuilder.lessThanOrEqualTo(root.<Instant>get("occurredAt"), query.to()));
+			if (!query.includeArchived()) predicates.add(criteriaBuilder.isNull(root.get("archivedAt")));
 			return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
 		};
 	}
