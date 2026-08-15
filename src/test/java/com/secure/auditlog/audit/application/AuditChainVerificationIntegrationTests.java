@@ -3,9 +3,11 @@ package com.secure.auditlog.audit.application;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
@@ -52,6 +54,87 @@ class AuditChainVerificationIntegrationTests {
 		jdbcClient.sql("UPDATE audit_chain_state SET last_sequence = 0, "
 				+ "last_hash = '0000000000000000000000000000000000000000000000000000000000000000', version = 0 WHERE id = 1")
 				.update();
+	}
+
+	@Test
+	void rejectsNonObjectAuditPayloads() throws Exception {
+		assertThrows(InvalidAuditEventException.class, () -> auditLogService.append(new CreateAuditEventCommand(
+				"INVALID", "actor-1", "ACCOUNT", "account-1", objectMapper.readTree("[]"))));
+	}
+
+	@Test
+	void appliesEveryQueryFilterAndArchivedVisibilityRule() throws Exception {
+		var matching = auditLogService.append(new CreateAuditEventCommand("ACCOUNT_ACCESSED", "actor-1", "ACCOUNT",
+				"account-1", objectMapper.readTree("{\"channel\":\"web\"}")));
+		auditLogService.append(new CreateAuditEventCommand("OTHER", "actor-2", "CASE", "case-1",
+				objectMapper.readTree("{\"channel\":\"batch\"}")));
+
+		var result = auditLogService.query(new AuditEventQuery("actor-1", "ACCOUNT", "account-1", "ACCOUNT_ACCESSED",
+				matching.getOccurredAt().minusSeconds(1), matching.getOccurredAt().plusSeconds(1), false, 0, 10));
+		assertEquals(List.of(matching.getId()), result.map(event -> event.getId()).getContent());
+
+		jdbcClient.sql("UPDATE audit_event SET archived_at = :at WHERE id = :id")
+				.param("at", Instant.parse("2027-01-01T00:00:00Z")).param("id", matching.getId()).update();
+		assertTrue(auditLogService.query(new AuditEventQuery("actor-1", null, null, null, null, null, false, 0, 10)).isEmpty());
+		assertEquals(1, auditLogService.query(
+				new AuditEventQuery("actor-1", null, null, null, null, null, true, 0, 10)).getTotalElements());
+	}
+
+	@Test
+	void rejectsInvalidRedactionPathSets() {
+		UUID id = UUID.randomUUID();
+		assertThrows(InvalidAuditEventException.class, () -> redactionService.redact(id, null));
+		assertThrows(InvalidAuditEventException.class, () -> redactionService.redact(id, List.of()));
+		assertThrows(InvalidAuditEventException.class, () -> redactionService.redact(id, List.of("/secret", "/secret")));
+		assertThrows(InvalidAuditEventException.class, () -> redactionService.redact(id, List.of("/")));
+		assertThrows(InvalidAuditEventException.class, () -> redactionService.redact(id, List.of("secret")));
+	}
+
+	@Test
+	void rejectsMissingAndRepeatedRedactions() throws Exception {
+		assertThrows(InvalidAuditEventException.class,
+				() -> redactionService.redact(UUID.randomUUID(), List.of("/secret")));
+		var event = auditLogService.append(new CreateAuditEventCommand("SECRET", "actor-1", "ACCOUNT", "account-1",
+				objectMapper.readTree("{\"secret\":\"value\"}")));
+		redactionService.redact(event.getId(), List.of("/secret"));
+		assertThrows(InvalidAuditEventException.class, () -> redactionService.redact(event.getId(), List.of("/secret")));
+	}
+
+	@Test
+	void redactsNestedArraysAndEscapedObjectKeys() throws Exception {
+		var event = auditLogService.append(new CreateAuditEventCommand("SECRET", "actor-1", "ACCOUNT", "account-1",
+				objectMapper.readTree("{\"items\":[{\"secret\":\"value\"}],\"a/b\":{\"~key\":42}}")));
+		redactionService.redact(event.getId(), List.of("/items/0/secret", "/a~1b/~0key"));
+		String payload = auditEventRepository.findById(event.getId()).orElseThrow().getPayload();
+		assertEquals("{\"a/b\":{\"~key\":\"[REDACTED]\"},\"items\":[{\"secret\":\"[REDACTED]\"}]}", payload);
+		assertTrue(verificationService.verify().intact());
+	}
+
+	@Test
+	void rejectsPointersToContainersMissingValuesAndInvalidArrayIndexes() throws Exception {
+		var event = auditLogService.append(new CreateAuditEventCommand("SECRET", "actor-1", "ACCOUNT", "account-1",
+				objectMapper.readTree("{\"items\":[{\"secret\":\"value\"}],\"nested\":{\"value\":1}}")));
+		assertThrows(InvalidAuditEventException.class, () -> redactionService.redact(event.getId(), List.of("/nested")));
+		assertThrows(InvalidAuditEventException.class, () -> redactionService.redact(event.getId(), List.of("/missing/value")));
+		assertThrows(InvalidAuditEventException.class, () -> redactionService.redact(event.getId(), List.of("/items/not-a-number")));
+		assertThrows(InvalidAuditEventException.class, () -> redactionService.redact(event.getId(), List.of("/items/9")));
+	}
+
+	@Test
+	void detectsPreviousHashAndChainStateCorruption() throws Exception {
+		var event = auditLogService.append(new CreateAuditEventCommand("EVENT", "actor-1", "ACCOUNT", "account-1",
+				objectMapper.readTree("{\"value\":1}")));
+		jdbcClient.sql("UPDATE audit_event SET previous_hash = :hash WHERE id = :id")
+				.param("hash", "f".repeat(64)).param("id", event.getId()).update();
+		assertEquals(ChainViolationType.PREVIOUS_HASH_MISMATCH, verificationService.verify().violationType());
+
+		jdbcClient.sql("UPDATE audit_event SET previous_hash = :hash WHERE id = :id")
+				.param("hash", "0".repeat(64)).param("id", event.getId()).update();
+		jdbcClient.sql("UPDATE audit_chain_state SET last_hash = :hash WHERE id = 1").param("hash", "f".repeat(64)).update();
+		assertEquals(ChainViolationType.CHAIN_STATE_HASH_MISMATCH, verificationService.verify().violationType());
+
+		jdbcClient.sql("UPDATE audit_chain_state SET last_sequence = 99 WHERE id = 1").update();
+		assertEquals(ChainViolationType.CHAIN_STATE_SEQUENCE_MISMATCH, verificationService.verify().violationType());
 	}
 
 	@Test

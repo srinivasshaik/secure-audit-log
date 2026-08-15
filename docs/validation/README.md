@@ -30,3 +30,9 @@ Generated reports are intentionally ignored because they contain machine paths a
 
 The concurrency invariant is stronger than request success: committed sequence values must be unique and contiguous and the complete chain must verify. Known residual production controls are external identity-provider policy, tenant-partitioned authorization, TLS certificate/proxy configuration, secret rotation, database encryption/backups, distributed rate limiting, alerting, and load testing.
 
+## Latest local result
+
+On 2026-08-15, `mvn --batch-mode clean verify` completed successfully with no test failures or errors. The Docker-dependent PostgreSQL Testcontainers test was skipped locally and must run in CI. JaCoCo generated current line, branch, and instruction coverage reports under `target/site/jacoco/`.
+
+The added cases cover invalid and duplicate redaction paths, nested arrays and escaped JSON Pointer tokens, missing/container/invalid-index targets, repeated and missing-event redactions, full query filtering and archived visibility, non-object payload rejection, previous-hash and chain-state corruption, authenticated event creation, HTTP Bean Validation, and problem-detail error translation.
+
