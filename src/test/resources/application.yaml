@@ -1,0 +1,25 @@
+audit:
+  security:
+    username: audit-service
+    password: test-only-password
+    roles:
+      - AUDIT_READER
+      - AUDIT_WRITER
+      - AUDIT_PRIVACY_OFFICER
+      - COMPLIANCE_OFFICER
+      - SYSTEM_ADMIN
+    swagger-public: false
+    h2-console-public: false
+  rate-limit:
+    requests-per-minute: 10000
+    max-clients: 100
+  retention:
+    archive-after: 365d
+    archive-cron: "0 0 2 * * *"
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true

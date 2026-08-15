@@ -22,3 +22,11 @@ jobs:
           cache: maven
       - name: Run unit, H2 integration, and PostgreSQL Testcontainers tests
         run: mvn --batch-mode verify
+      - name: Publish test and coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-reports
+          path: |
+            target/surefire-reports/
+            target/site/jacoco/

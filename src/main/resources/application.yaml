@@ -25,7 +25,6 @@ springdoc:
     path: /swagger-ui.html
 
 audit:
-
   security:
     username: ${AUDIT_LOG_API_USERNAME:audit-service}
     roles:
@@ -34,6 +33,9 @@ audit:
       - AUDIT_PRIVACY_OFFICER
       - COMPLIANCE_OFFICER
       - SYSTEM_ADMIN
+  rate-limit:
+    requests-per-minute: ${AUDIT_LOG_RATE_LIMIT_PER_MINUTE:120}
+    max-clients: ${AUDIT_LOG_RATE_LIMIT_MAX_CLIENTS:10000}
 
   retention:
     archive-after: 365d

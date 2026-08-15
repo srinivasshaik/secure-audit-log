@@ -26,25 +26,23 @@ class SecurityIntegrationTests {
 	}
 
 	@Test
-	void exposesSwaggerDocumentationWithoutAuthenticationInDev() throws Exception {
+	void protectsSwaggerDocumentationInDev() throws Exception {
 		mockMvc.perform(get("/v3/api-docs"))
-				.andExpect(status().isOk());
+				.andExpect(status().isUnauthorized());
 	}
 
 	@Test
-	void doesNotRequireAuthenticationForH2ConsoleInDev() throws Exception {
-		// MockMvc does not dispatch to the separately registered H2 servlet. A 404 here
-		// therefore proves Spring Security did not challenge the unauthenticated request.
+	void protectsH2ConsoleInDev() throws Exception {
 		mockMvc.perform(get("/h2-console/"))
-				.andExpect(status().isNotFound())
-				.andExpect(header().doesNotExist("WWW-Authenticate"));
+				.andExpect(status().isUnauthorized())
+				.andExpect(header().exists("WWW-Authenticate"));
 	}
 
 	@Test
 	void protectsAuditEndpointsAndAllowsAnAuthorizedReader() throws Exception {
 		mockMvc.perform(get("/audit/verify"))
 				.andExpect(status().isUnauthorized());
-		mockMvc.perform(get("/audit/verify").with(httpBasic("audit-service", "local-dev-only-change-me")))
+		mockMvc.perform(get("/audit/verify").with(httpBasic("audit-service", "test-only-password")))
 				.andExpect(status().isOk());
 	}
 }

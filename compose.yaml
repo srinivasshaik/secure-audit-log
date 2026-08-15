@@ -3,9 +3,9 @@ services:
     image: postgres:17-alpine
     profiles: ["prod"]
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-audit_log}
-      POSTGRES_USER: ${POSTGRES_USER:-audit_log}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
@@ -22,11 +22,10 @@ services:
     profiles: ["prod"]
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      AUDIT_LOG_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-audit_log}
-      AUDIT_LOG_DB_USERNAME: ${POSTGRES_USER:-audit_log}
-      AUDIT_LOG_DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
-      AUDIT_LOG_API_USERNAME: ${AUDIT_LOG_API_USERNAME:-audit-service}
-      AUDIT_LOG_API_PASSWORD: ${AUDIT_LOG_API_PASSWORD:?Set AUDIT_LOG_API_PASSWORD in .env}
+      AUDIT_LOG_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      AUDIT_LOG_DB_USERNAME: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      AUDIT_LOG_DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      AUDIT_LOG_OIDC_ISSUER: ${AUDIT_LOG_OIDC_ISSUER:?Set AUDIT_LOG_OIDC_ISSUER in .env}
     ports:
       - "${AUDIT_LOG_PORT:-8080}:8080"
     depends_on:

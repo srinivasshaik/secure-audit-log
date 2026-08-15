@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 import com.secure.auditlog.audit.domain.ChainVerificationResult;
 import com.secure.auditlog.audit.domain.ChainViolationType;
@@ -49,6 +52,41 @@ class AuditChainVerificationIntegrationTests {
 		jdbcClient.sql("UPDATE audit_chain_state SET last_sequence = 0, "
 				+ "last_hash = '0000000000000000000000000000000000000000000000000000000000000000', version = 0 WHERE id = 1")
 				.update();
+	}
+
+	@Test
+	void serializesConcurrentAppendsWithoutBreakingTheChain() throws Exception {
+		int appendCount = 12;
+		try (var executor = Executors.newFixedThreadPool(6)) {
+			var tasks = IntStream.range(0, appendCount)
+					.mapToObj(index -> (java.util.concurrent.Callable<Long>) () -> auditLogService.append(
+							new CreateAuditEventCommand("CONCURRENT_EVENT", "actor-" + index, "ACCOUNT",
+									"account-" + index, objectMapper.readTree("{\"index\":" + index + "}")))
+							.getChainSequence())
+					.toList();
+			var futures = executor.invokeAll(tasks);
+			executor.shutdown();
+			assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
+			var sequences = futures.stream().map(future -> {
+				try { return future.get(); } catch (Exception exception) { throw new AssertionError(exception); }
+			}).sorted().toList();
+			assertEquals(IntStream.rangeClosed(1, appendCount).asLongStream().boxed().toList(), sequences);
+		}
+		assertTrue(verificationService.verify().intact());
+	}
+
+	@Test
+	void detectsADeletedLedgerRecordAsASequenceGap() throws Exception {
+		var first = auditLogService.append(new CreateAuditEventCommand("FIRST", "actor-1", "ACCOUNT", "account-1",
+				objectMapper.readTree("{\"position\":1}")));
+		auditLogService.append(new CreateAuditEventCommand("SECOND", "actor-2", "ACCOUNT", "account-2",
+				objectMapper.readTree("{\"position\":2}")));
+
+		jdbcClient.sql("DELETE FROM audit_event WHERE id = :id").param("id", first.getId()).update();
+
+		ChainVerificationResult result = verificationService.verify();
+		assertFalse(result.intact());
+		assertEquals(ChainViolationType.SEQUENCE_GAP, result.violationType());
 	}
 
 	@Test

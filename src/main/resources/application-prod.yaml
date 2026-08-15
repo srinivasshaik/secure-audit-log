@@ -7,7 +7,21 @@ spring:
   h2:
     console:
       enabled: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${AUDIT_LOG_OIDC_ISSUER}
+
+server:
+  forward-headers-strategy: framework
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
 
 audit:
   security:
-    password: ${AUDIT_LOG_API_PASSWORD}
+    require-https: true
